@@ -2086,17 +2086,41 @@
         }
 
         function viewResultByIndex(index) {
+            // سحب أحدث نسخة من البيانات للتأكد من وجود النتيجة بدقة
+            const localData = localStorage.getItem('prep1_full_master_db_v6');
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    if (parsed && parsed.results) DB.results = parsed.results;
+                    if (parsed && parsed.essaySubmissions) DB.essaySubmissions = parsed.essaySubmissions;
+                } catch(e) {}
+            }
+
             const r = DB.results[index];
-            if (!r) return;
+            if (!r) {
+                showToast('تعذر العثور على نتيجة الطالب.', 'fa-triangle-exclamation', true);
+                return;
+            }
             const essaySub = DB.essaySubmissions ? DB.essaySubmissions.find(sub => sub.studentId === r.studentId) : null;
             displayComprehensiveStudentResult(r, essaySub);
         }
 
         function renderAdminResults() {
+            // مزامنة فورية للتخزين المحلي لعرض نتائج الطلاب الجدد فور انتهاء اختباراتهم
+            const localData = localStorage.getItem('prep1_full_master_db_v6');
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    if (parsed && parsed.results) DB.results = parsed.results;
+                    if (parsed && parsed.essaySubmissions) DB.essaySubmissions = parsed.essaySubmissions;
+                } catch(e) {}
+            }
+
             const tbody = document.getElementById('admin-results-tbody');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
-            if (DB.results.length === 0) {
+            if (!DB.results || DB.results.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-500">لا توجد نتائج مسجلة حتى الآن.</td></tr>';
                 return;
             }
