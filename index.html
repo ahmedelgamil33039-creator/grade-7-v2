@@ -782,7 +782,6 @@
                     if (parsed && parsed.config) DB = parsed;
                 } catch(e) {}
             }
-
             if (!DB.essaySubmissions) DB.essaySubmissions = [];
 
             try {
@@ -791,12 +790,12 @@
                     const text = await response.text();
                     if (text && text.trim().length > 10) {
                         const data = JSON.parse(text);
-                        if (data && data.config) {
+                        if (data && data.config && data.questions && data.questions.length > 0) {
                             DB.config = { ...DEFAULT_CONFIG, ...data.config };
                             DB.config.bannerUrl = NEW_BANNER_URL;
                             if (data.students && data.students.length > 0) DB.students = data.students;
-                            if (data.questions && data.questions.length > 0) DB.questions = data.questions;
-                            if (data.results && data.results.length > 0) DB.results = data.results;
+                            DB.questions = data.questions;
+                            if (data.results) DB.results = data.results;
                             if (data.essaySubmissions) DB.essaySubmissions = data.essaySubmissions;
                             localStorage.setItem('prep1_full_master_db_v6', JSON.stringify(DB));
                         }
@@ -1482,6 +1481,7 @@
 
             if (tabName === 'grading') renderAdminGrading();
             if (tabName === 'banned') renderAdminBanned();
+            if (tabName === 'results') renderAdminResults();
         }
 
         function updateRandomButtonUI() {
@@ -2085,6 +2085,13 @@
             }
         }
 
+        function viewResultByIndex(index) {
+            const r = DB.results[index];
+            if (!r) return;
+            const essaySub = DB.essaySubmissions ? DB.essaySubmissions.find(sub => sub.studentId === r.studentId) : null;
+            displayComprehensiveStudentResult(r, essaySub);
+        }
+
         function renderAdminResults() {
             const tbody = document.getElementById('admin-results-tbody');
             tbody.innerHTML = '';
@@ -2104,7 +2111,7 @@
                     <td class="p-2.5 text-slate-400">${r.correctCount} صح / ${r.wrongCount} خطأ</td>
                     <td class="p-2.5 text-slate-400 font-mono text-[11px]">${r.dateTime}</td>
                     <td class="p-2.5 flex items-center gap-2">
-                        <button type="button" onclick='displayComprehensiveStudentResult(${JSON.stringify(r)}, ${JSON.stringify(DB.essaySubmissions ? DB.essaySubmissions.find(sub => sub.studentId === r.studentId) : null)})' class="text-rose-300 hover:text-rose-200 underline text-xs cursor-pointer">عرض</button>
+                        <button type="button" onclick="viewResultByIndex(${actualIndex})" class="text-rose-300 hover:text-rose-200 underline text-xs cursor-pointer">عرض</button>
                         <span class="text-slate-600">|</span>
                         <button type="button" onclick="deleteSingleResult(${actualIndex})" class="text-red-400 hover:text-red-300 text-xs font-semibold px-2 py-1 rounded bg-red-500/10 cursor-pointer">حذف</button>
                     </td>
