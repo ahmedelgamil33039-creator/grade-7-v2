@@ -2177,6 +2177,10 @@
         }
 
         window.onload = fetchCloudData;
-    </script>
+    </script>window.onload = async function() {
+    await fetchCloudData();
+    // تفعيل جلب تلقائي كل 10 ثواني عشان لو حصل ريفرش يسحب أحدث حاجة فوراً
+    setInterval(fetchCloudData, 10000);
+};
 </body>
 </html>
