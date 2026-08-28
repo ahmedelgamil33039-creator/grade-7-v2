@@ -775,38 +775,63 @@
         let isPreviewMode = false;
         let isEndingQuiz = false;
 
-        // دالة جلب البيانات مع مانع الكاش لضمان ظهور الأسئلة والأسماء على الموبايل فوراً
-        async function fetchCloudData() {
-            const noCacheUrl = `${GOOGLE_SCRIPT_URL}?testId=${DEFAULT_CONFIG.testId}&t=${new Date().getTime()}`;
-            
-            try {
-                const response = await fetch(noCacheUrl);
-                if (response.ok) {
-                    const text = await response.text();
-                    if (text && text.trim().length > 10) {
-                        const data = JSON.parse(text);
-                        if (data && data.config) {
-                            DB.config = { ...DEFAULT_CONFIG, ...data.config };
-                            DB.config.bannerUrl = NEW_BANNER_URL;
-                            if (data.students && data.students.length > 0) DB.students = data.students;
-                            if (data.questions) DB.questions = data.questions;
-                            if (data.results) DB.results = data.results;
-                            if (data.essaySubmissions) DB.essaySubmissions = data.essaySubmissions;
-                            
-                            localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
-                        }
-                    }
-                }
-            } catch(e) {
-                const localData = localStorage.getItem('prep1_full_master_db_v3');
-                if (localData) {
-                    try { DB = JSON.parse(localData); } catch(err) {}
+// دالة الجلب المباشرة والحصرية من السحابة دون الاعتماد على بيانات وهمية قديمة
+async function fetchCloudData() {
+    const noCacheUrl = `${GOOGLE_SCRIPT_URL}?testId=${DEFAULT_CONFIG.testId}&t=${new Date().getTime()}`;
+    
+    try {
+        const response = await fetch(noCacheUrl);
+        if (response.ok) {
+            const text = await response.text();
+            if (text && text.trim().length > 5) {
+                const data = JSON.parse(text);
+                // لو السحابة فيها داتا حقيقية (طلاب أو نتائج أو أسئلة)، اعتمدها فوراً
+                if (data && (data.students || data.questions || data.results)) {
+                    DB.config = { ...DEFAULT_CONFIG, ...(data.config || {}) };
+                    DB.config.bannerUrl = NEW_BANNER_URL;
+                    
+                    // لو الشيت فيه طلاب مسجلين، حطهم، لو مفيش خليه فاضي تماماً بدل ما يرجع لأسماء قديمة
+                    DB.students = data.students || [];
+                    DB.questions = data.questions || [];
+                    DB.results = data.results || [];
+                    DB.essaySubmissions = data.essaySubmissions || [];
+                    
+                    localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
                 }
             }
-
-            initApp();
-            checkActiveResumeSession();
         }
+    } catch(e) {
+        // في حال عدم وجود انترنت، اقرأ من المحلي بحذر
+        const localData = localStorage.getItem('prep1_full_master_db_v3');
+        if (localData) {
+            try { DB = JSON.parse(localData); } catch(err) {}
+        }
+    }
+
+    initApp();
+    checkActiveResumeSession();
+}
+
+// دالة الحفظ المباشرة اللي بتجبر السيرفر يكتب في الخلية A1 وتستنى تأكيد الحفظ
+async function saveDatabase() {
+    DB.config.bannerUrl = NEW_BANNER_URL;
+    localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
+    
+    try {
+        let payload = { ...DB, testId: DEFAULT_CONFIG.testId };
+        let res = await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        let jsonRes = await res.json();
+        if (jsonRes.status === 'success') {
+            showToast('تم الحفظ في السحابة بنجاح ☁️', 'fa-cloud-arrow-up');
+        }
+    } catch(e) {
+        showToast('خطأ في الاتصال بالشبكة!', 'fa-triangle-exclamation', true);
+    }
+}
 
         // دالة حفظ البيانات السحابية والمحلية بـ text/plain لتتخطى حظر المتصفحات والموبايل
         async function saveDatabase() {
