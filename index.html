@@ -629,7 +629,6 @@
     
     <!-- SCRIPT ENGINE -->
     <script>
-        // الرابط الجديد الخاص بشيت الصف الأول الإعدادي v.3
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpF0Rql_rrxQOQLo7cM3_3n8SvuU669YrpsIrk877FgyzsB8rMP-8Jlg3TO6OnxnRNrw/exec";
         const NEW_BANNER_URL = "https://i.postimg.cc/Y2FdWsdv/ghlaf.jpg";
 
@@ -775,76 +774,59 @@
         let isPreviewMode = false;
         let isEndingQuiz = false;
 
-// دالة الجلب المباشرة والحصرية من السحابة دون الاعتماد على بيانات وهمية قديمة
-async function fetchCloudData() {
-    const noCacheUrl = `${GOOGLE_SCRIPT_URL}?testId=${DEFAULT_CONFIG.testId}&t=${new Date().getTime()}`;
-    
-    try {
-        const response = await fetch(noCacheUrl);
-        if (response.ok) {
-            const text = await response.text();
-            if (text && text.trim().length > 5) {
-                const data = JSON.parse(text);
-                // لو السحابة فيها داتا حقيقية (طلاب أو نتائج أو أسئلة)، اعتمدها فوراً
-                if (data && (data.students || data.questions || data.results)) {
-                    DB.config = { ...DEFAULT_CONFIG, ...(data.config || {}) };
-                    DB.config.bannerUrl = NEW_BANNER_URL;
-                    
-                    // لو الشيت فيه طلاب مسجلين، حطهم، لو مفيش خليه فاضي تماماً بدل ما يرجع لأسماء قديمة
-                    DB.students = data.students || [];
-                    DB.questions = data.questions || [];
-                    DB.results = data.results || [];
-                    DB.essaySubmissions = data.essaySubmissions || [];
-                    
-                    localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
+        // دالة الجلب المباشرة والحصرية من السحابة دون الاعتماد على بيانات وهمية قديمة
+        async function fetchCloudData() {
+            const noCacheUrl = `${GOOGLE_SCRIPT_URL}?testId=${DEFAULT_CONFIG.testId}&t=${new Date().getTime()}`;
+            
+            try {
+                const response = await fetch(noCacheUrl);
+                if (response.ok) {
+                    const text = await response.text();
+                    if (text && text.trim().length > 5) {
+                        const data = JSON.parse(text);
+                        if (data && (data.students || data.questions || data.results)) {
+                            DB.config = { ...DEFAULT_CONFIG, ...(data.config || {}) };
+                            DB.config.bannerUrl = NEW_BANNER_URL;
+                            
+                            DB.students = data.students || [];
+                            DB.questions = data.questions || [];
+                            DB.results = data.results || [];
+                            DB.essaySubmissions = data.essaySubmissions || [];
+                            
+                            localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
+                        }
+                    }
+                }
+            } catch(e) {
+                const localData = localStorage.getItem('prep1_full_master_db_v3');
+                if (localData) {
+                    try { DB = JSON.parse(localData); } catch(err) {}
                 }
             }
-        }
-    } catch(e) {
-        // في حال عدم وجود انترنت، اقرأ من المحلي بحذر
-        const localData = localStorage.getItem('prep1_full_master_db_v3');
-        if (localData) {
-            try { DB = JSON.parse(localData); } catch(err) {}
-        }
-    }
 
-    initApp();
-    checkActiveResumeSession();
-}
-
-// دالة الحفظ المباشرة اللي بتجبر السيرفر يكتب في الخلية A1 وتستنى تأكيد الحفظ
-async function saveDatabase() {
-    DB.config.bannerUrl = NEW_BANNER_URL;
-    localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
-    
-    try {
-        let payload = { ...DB, testId: DEFAULT_CONFIG.testId };
-        let res = await fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-        });
-        let jsonRes = await res.json();
-        if (jsonRes.status === 'success') {
-            showToast('تم الحفظ في السحابة بنجاح ☁️', 'fa-cloud-arrow-up');
+            initApp();
+            checkActiveResumeSession();
         }
-    } catch(e) {
-        showToast('خطأ في الاتصال بالشبكة!', 'fa-triangle-exclamation', true);
-    }
-}
 
-        // دالة حفظ البيانات السحابية والمحلية بـ text/plain لتتخطى حظر المتصفحات والموبايل
+        // دالة الحفظ المباشرة وتأكيد الحفظ السحابي
         async function saveDatabase() {
             DB.config.bannerUrl = NEW_BANNER_URL;
             localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
+            
             try {
                 let payload = { ...DB, testId: DEFAULT_CONFIG.testId };
-                await fetch(GOOGLE_SCRIPT_URL, {
+                let res = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
-            } catch(e) {}
+                let jsonRes = await res.json();
+                if (jsonRes.status === 'success') {
+                    showToast('تم الحفظ في السحابة بنجاح ☁️', 'fa-cloud-arrow-up');
+                }
+            } catch(e) {
+                showToast('خطأ في الاتصال بالشبكة!', 'fa-triangle-exclamation', true);
+            }
         }
 
         function showToast(msg, icon = 'fa-circle-info', isError = false) {
@@ -2101,7 +2083,6 @@ async function saveDatabase() {
             });
         }
 
-        // تم ضبط هذه الدالة هنا بعناية لتقوم بتنظيف سحابي ومحلي فوري دون التأثير على الأسئلة أو بقية الطلاب
         async function resetStudentSubmission(studentId) {
             if (confirm('هل أنت متأكد من مسح تسليم هذا الطالب وإلغاء حجبه تماماً لتمكينه من الإعادة؟')) {
                 DB.results = DB.results.filter(r => r.studentId !== studentId);
@@ -2201,11 +2182,8 @@ async function saveDatabase() {
             link.click();
         }
 
+        // تشغيل الجلب عند فتح الصفحة
         window.onload = fetchCloudData;
-    </script>window.onload = async function() {
-    await fetchCloudData();
-    // تفعيل جلب تلقائي كل 10 ثواني عشان لو حصل ريفرش يسحب أحدث حاجة فوراً
-    setInterval(fetchCloudData, 10000);
-};
+    </script>
 </body>
 </html>
