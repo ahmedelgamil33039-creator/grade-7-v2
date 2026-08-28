@@ -2076,14 +2076,25 @@
             });
         }
 
+        // تم ضبط هذه الدالة هنا بعناية لتقوم بتنظيف سحابي ومحلي فوري دون التأثير على الأسئلة أو بقية الطلاب
         async function resetStudentSubmission(studentId) {
-            if (confirm('هل أنت متأكد من مسح تسليم هذا الطالب لتمكينه من إعادة الاختبار؟')) {
+            if (confirm('هل أنت متأكد من مسح تسليم هذا الطالب وإلغاء حجبه تماماً لتمكينه من الإعادة؟')) {
                 DB.results = DB.results.filter(r => r.studentId !== studentId);
-                if (DB.essaySubmissions) DB.essaySubmissions = DB.essaySubmissions.filter(s => s.studentId !== studentId);
+                if (DB.essaySubmissions) {
+                    DB.essaySubmissions = DB.essaySubmissions.filter(s => s.studentId !== studentId);
+                }
+                
                 await saveDatabase();
+                
+                localStorage.removeItem('prep1_active_attempt_v3');
+                localStorage.removeItem('prep1_full_master_db_v3');
+                
+                await fetchCloudData();
+                
                 renderAdminBanned();
                 renderAdminResults();
-                showToast('تم مسح تسليم الطالب بنجاح.', 'fa-circle-check');
+                initApp();
+                showToast('تم مسح تسليم الطالب بنجاح وإتاحة الإعادة.', 'fa-circle-check');
             }
         }
 
