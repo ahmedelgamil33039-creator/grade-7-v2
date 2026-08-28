@@ -255,7 +255,7 @@
                             <i class="fa-solid fa-graduation-cap"></i>
                         </div>
                         <div>
-                            <h2 class="text-xl font-black text-white">لوحة تحكم الصف الأول الإعدادي</h2>
+                            <h2 class="text-xl font-black text-white">لوحة تحكم الصف الأول الإعدادي (v.3)</h2>
                             <p class="text-xs text-rose-300">متصلة سحابياً ومحلياً بجداول بيانات Google ومع دعم المقالي</p>
                         </div>
                     </div>
@@ -535,7 +535,7 @@
                 <!-- TAB 7: RESULTS -->
                 <div id="admin-tab-results" class="admin-tab-content space-y-4 hidden text-right">
                     <div class="flex flex-wrap justify-between items-center gap-2">
-                        <h4 class="font-bold text-sm text-rose-300">سجل نتائج طلاب الصف الأول الإعدادي</h4>
+                        <h4 class="font-bold text-sm text-rose-300">سجل نتائج طلاب الصف الأول الإعدادي (v.3)</h4>
                         <div class="flex gap-2">
                             <button type="button" onclick="clearAllResults()" class="bg-red-600/30 hover:bg-red-600 text-red-200 border border-rose-500/40 font-bold px-3 py-1.5 rounded-xl text-xs transition cursor-pointer">
                                 <i class="fa-solid fa-trash-can ml-1"></i> مسح جميع النتائج
@@ -629,7 +629,8 @@
     
     <!-- SCRIPT ENGINE -->
     <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxd54mmvoCyKnc8vMBCdnpN_HakmOG8XUEL72lIvrlEt8CcHhZK414ubd3Bd1QNURgAlg/exec";
+        // الرابط الجديد الخاص بشيت الصف الأول الإعدادي v.3
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzd0gy7f9Tu1kXuR6um9MW4FA6lnosz98fm0hBBFc6DqG-KAa5mJGe0r536t5plJmttoA/exec";
         const NEW_BANNER_URL = "https://i.postimg.cc/Y2FdWsdv/ghlaf.jpg";
 
         let audioCtx = null;
@@ -748,7 +749,7 @@
         }
 
         const DEFAULT_CONFIG = {
-            testId: 'exam_soc_prep1_v40_final',
+            testId: 'exam_soc_prep1_v3_final',
             title: 'اختبار الصف الأول الإعدادي',
             grade: 'الصف الأول الإعدادي',
             subject: 'الدراسات الاجتماعية',
@@ -774,49 +775,49 @@
         let isPreviewMode = false;
         let isEndingQuiz = false;
 
+        // دالة جلب البيانات مع مانع الكاش لضمان ظهور الأسئلة والأسماء على الموبايل فوراً
         async function fetchCloudData() {
-            const localData = localStorage.getItem('prep1_full_master_db_v6');
-            if (localData) {
-                try {
-                    const parsed = JSON.parse(localData);
-                    if (parsed && parsed.config) DB = parsed;
-                } catch(e) {}
-            }
-            if (!DB.essaySubmissions) DB.essaySubmissions = [];
-
+            const noCacheUrl = `${GOOGLE_SCRIPT_URL}?testId=${DEFAULT_CONFIG.testId}&t=${new Date().getTime()}`;
+            
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?testId=${DEFAULT_CONFIG.testId}`);
+                const response = await fetch(noCacheUrl);
                 if (response.ok) {
                     const text = await response.text();
                     if (text && text.trim().length > 10) {
                         const data = JSON.parse(text);
-                        if (data && data.config && data.questions && data.questions.length > 0) {
+                        if (data && data.config) {
                             DB.config = { ...DEFAULT_CONFIG, ...data.config };
                             DB.config.bannerUrl = NEW_BANNER_URL;
                             if (data.students && data.students.length > 0) DB.students = data.students;
-                            DB.questions = data.questions;
+                            if (data.questions) DB.questions = data.questions;
                             if (data.results) DB.results = data.results;
                             if (data.essaySubmissions) DB.essaySubmissions = data.essaySubmissions;
-                            localStorage.setItem('prep1_full_master_db_v6', JSON.stringify(DB));
+                            
+                            localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
                         }
                     }
                 }
-            } catch(e) {}
+            } catch(e) {
+                const localData = localStorage.getItem('prep1_full_master_db_v3');
+                if (localData) {
+                    try { DB = JSON.parse(localData); } catch(err) {}
+                }
+            }
 
             initApp();
             checkActiveResumeSession();
         }
 
+        // دالة حفظ البيانات السحابية والمحلية بـ text/plain لتتخطى حظر المتصفحات والموبايل
         async function saveDatabase() {
             DB.config.bannerUrl = NEW_BANNER_URL;
-            localStorage.setItem('prep1_full_master_db_v6', JSON.stringify(DB));
+            localStorage.setItem('prep1_full_master_db_v3', JSON.stringify(DB));
             try {
                 let payload = { ...DB, testId: DEFAULT_CONFIG.testId };
                 await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
             } catch(e) {}
         }
@@ -915,7 +916,7 @@
         });
 
         function checkActiveResumeSession() {
-            const savedAttempt = localStorage.getItem('prep1_active_attempt');
+            const savedAttempt = localStorage.getItem('prep1_active_attempt_v3');
             if (savedAttempt) {
                 try {
                     const parsed = JSON.parse(savedAttempt);
@@ -928,7 +929,7 @@
                         navigateTo('screen-quiz');
                         renderCurrentQuestion();
                         startQuizTimer();
-                        showToast('تنبيه: تم رصد تحديث للصفحة، وتم خلط الأسئلة الباقية لمنع محاولات الغش!', 'fa-shield', true);
+                        showToast('تنبيه: تم استعادة جلستك السابقة في الاختبار.', 'fa-shield', true);
                     }
                 } catch(e) {}
             }
@@ -936,12 +937,12 @@
 
         function saveActiveAttemptState() {
             if (!isPreviewMode && activeAttempt && !activeAttempt.isCompleted) {
-                localStorage.setItem('prep1_active_attempt', JSON.stringify(activeAttempt));
+                localStorage.setItem('prep1_active_attempt_v3', JSON.stringify(activeAttempt));
             }
         }
 
         function clearActiveAttemptState() {
-            localStorage.removeItem('prep1_active_attempt');
+            localStorage.removeItem('prep1_active_attempt_v3');
         }
 
         function handleStartClick() {
@@ -1201,7 +1202,6 @@
 
             document.getElementById('quiz-question-counter').innerText = `السؤال ${activeAttempt.currentIndex + 1} من ${activeAttempt.questions.length}`;
             document.getElementById('quiz-q-points').innerText = q.points;
-            
             document.getElementById('quiz-q-text').innerHTML = cleanQuestionTextDisplay(q.text);
 
             const typeBadge = getQuestionTypeBadge(q);
@@ -1406,6 +1406,7 @@
             };
 
             if (objQuestions.length > 0) {
+                DB.results = DB.results.filter(r => r.studentId !== currentStudent.id);
                 DB.results.push(resultObj);
             }
 
@@ -1420,6 +1421,8 @@
                 essayQuestions.forEach(q => maxEssayPoints += q.points);
 
                 if (!DB.essaySubmissions) DB.essaySubmissions = [];
+                DB.essaySubmissions = DB.essaySubmissions.filter(s => s.studentId !== currentStudent.id);
+
                 lastEssaySub = {
                     id: 'esub_' + Date.now(),
                     studentId: currentStudent.id,
@@ -1435,6 +1438,7 @@
             }
 
             if (!isPreviewMode) {
+                showToast('جاري حفظ وإرسال النتيجة للإدارة...', 'fa-cloud-arrow-up');
                 await saveDatabase();
             }
 
@@ -1739,7 +1743,6 @@
             document.getElementById('admin-q-points').value = '1';
         }
 
-        // --- BULK IMPORT WITH FIXED BLOCK PARSER ---
         async function importBulkQuestions() {
             const rawText = document.getElementById('admin-bulk-input').value;
             if (!rawText.trim()) {
@@ -1876,7 +1879,6 @@
             }
         }
 
-        // --- MANUAL ESSAY GRADING IN ADMIN (MODAL VIEW) ---
         function renderAdminGrading() {
             const container = document.getElementById('admin-grading-tbody');
             if (!container) return;
@@ -2086,16 +2088,6 @@
         }
 
         function viewResultByIndex(index) {
-            // سحب أحدث نسخة من البيانات للتأكد من وجود النتيجة بدقة
-            const localData = localStorage.getItem('prep1_full_master_db_v6');
-            if (localData) {
-                try {
-                    const parsed = JSON.parse(localData);
-                    if (parsed && parsed.results) DB.results = parsed.results;
-                    if (parsed && parsed.essaySubmissions) DB.essaySubmissions = parsed.essaySubmissions;
-                } catch(e) {}
-            }
-
             const r = DB.results[index];
             if (!r) {
                 showToast('تعذر العثور على نتيجة الطالب.', 'fa-triangle-exclamation', true);
@@ -2106,16 +2098,6 @@
         }
 
         function renderAdminResults() {
-            // مزامنة فورية للتخزين المحلي لعرض نتائج الطلاب الجدد فور انتهاء اختباراتهم
-            const localData = localStorage.getItem('prep1_full_master_db_v6');
-            if (localData) {
-                try {
-                    const parsed = JSON.parse(localData);
-                    if (parsed && parsed.results) DB.results = parsed.results;
-                    if (parsed && parsed.essaySubmissions) DB.essaySubmissions = parsed.essaySubmissions;
-                } catch(e) {}
-            }
-
             const tbody = document.getElementById('admin-results-tbody');
             if (!tbody) return;
             tbody.innerHTML = '';
